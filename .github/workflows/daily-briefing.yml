@@ -2,7 +2,7 @@ name: Daily Supply Chain Briefing
 
 on:
   schedule:
-    - cron: '0 23 * * *'   # 每天7:00（北京时间）
+    - cron: '0 23 * * *'
   workflow_dispatch:
 
 jobs:
@@ -21,4 +21,3 @@ jobs:
         env:
           SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
         run: python briefing.py
-  No file chosen
