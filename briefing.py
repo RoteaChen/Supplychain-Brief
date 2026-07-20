@@ -5,10 +5,19 @@ from datetime import datetime
 
 # ========== 配置 ==========
 RSS_SOURCES = {
+    # 供应链物流
     "罗戈网": "https://www.logclub.com/feed",
     "物流指闻": "https://www.wuliuzhixun.com/feed",
     "Talking Logistics": "https://talkinglogistics.com/feed/",
     "Supply Chain Dive": "https://www.supplychaindive.com/feeds/news/",
+    
+    # 互联网电商（新增）
+    "36氪": "https://36kr.com/feed",
+    "虎嗅": "https://www.huxiu.com/rss",
+    "亿邦动力": "https://www.ebrun.com/feed",
+    "电商报": "https://www.dsb.cn/feed",
+    "TechCrunch": "https://techcrunch.com/feed/",
+    "The Information": "https://www.theinformation.com/feed",
 }
 
 def fetch_news():
@@ -30,19 +39,33 @@ def fetch_news():
 def generate_bulletin(news_list):
     """生成简报"""
     lines = [
-        f"📦 供应链物流日报 | {datetime.now().strftime('%m月%d日')}",
+        f" 供应链物流日报 | {datetime.now().strftime('%m月%d日')}",
         "=" * 30,
         ""
     ]
     
-    # 头条
-    lines.append("🔴 头条要闻")
-    for i, item in enumerate(news_list[:2], 1):
+    # 物流头条
+    logistics_sources = ["罗戈网", "物流指闻", "Talking Logistics", "Supply Chain Dive"]
+    logistics_news = [n for n in news_list if n['source'] in logistics_sources]
+    
+    lines.append(" 物流头条")
+    for i, item in enumerate(logistics_news[:2], 1):
         lines.append(f"{i}. 【{item['source']}】{item['title']}")
-        lines.append(f"   👉 {item['link']}")
+        lines.append(f"    {item['link']}")
         lines.append("")
     
-    # AI/数字化
+    # 电商动态（新增）
+    ecommerce_sources = ["36氪", "虎嗅", "亿邦动力", "电商报", "TechCrunch", "The Information"]
+    ecommerce_news = [n for n in news_list if n['source'] in ecommerce_sources]
+    
+    if ecommerce_news:
+        lines.append("🛒 电商动态")
+        for i, item in enumerate(ecommerce_news[:2], 1):
+            lines.append(f"{i}. 【{item['source']}】{item['title']}")
+            lines.append(f"    {item['link']}")
+            lines.append("")
+    
+    # AI与数字化
     ai_keywords = ['AI', '智能', '数字化', '自动化', '机器人', '无人']
     ai_news = [n for n in news_list if any(k in n['title'] for k in ai_keywords)]
     if ai_news:
@@ -52,11 +75,11 @@ def generate_bulletin(news_list):
         lines.append("")
     
     # 每日一策
-    lines.append("💡 每日一策")
-    lines.append("👉 关注AI Agent在物流落地案例，2026年已从实验进入实战阶段，")
+    lines.append(" 每日一策")
+    lines.append(" 关注AI Agent在物流与电商的落地案例，2026年已从实验进入实战阶段，")
     lines.append("   未布局企业可能面临效率差距扩大风险。")
     lines.append("")
-    lines.append(f"⏰ 更新时间: {datetime.now().strftime('%H:%M')}")
+    lines.append(f" 更新时间: {datetime.now().strftime('%H:%M')}")
     
     return "\n".join(lines)
 
@@ -71,7 +94,7 @@ def push_serverchan(title, content):
         requests.post(url, data={"title": title, "desp": content}, timeout=10)
         print("✅ Server酱推送成功")
     except Exception as e:
-        print(f"❌ Server酱推送失败: {e}")
+        print(f" Server酱推送失败: {e}")
 
 def push_bark(title, content):
     """Bark推送"""
@@ -84,7 +107,7 @@ def push_bark(title, content):
         requests.get(url, timeout=10)
         print("✅ Bark推送成功")
     except Exception as e:
-        print(f"❌ Bark推送失败: {e}")
+        print(f" Bark推送失败: {e}")
 
 def push_dingtalk(content):
     """钉钉推送"""
@@ -100,7 +123,7 @@ def push_dingtalk(content):
         requests.post(webhook, json=payload, timeout=10)
         print("✅ 钉钉推送成功")
     except Exception as e:
-        print(f"❌ 钉钉推送失败: {e}")
+        print(f" 钉钉推送失败: {e}")
 
 def main():
     print(f"🤖 简报生成开始 | {datetime.now()}")
@@ -109,7 +132,7 @@ def main():
     print(f"📰 抓取到 {len(news)} 条新闻")
     
     bulletin = generate_bulletin(news)
-    print("📝 简报生成完成")
+    print(" 简报生成完成")
     
     push_serverchan("供应链物流日报", bulletin)
     push_bark("供应链日报", bulletin)
