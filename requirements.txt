@@ -1,3 +1,4 @@
+dnspython
+beautifulsoup4
 feedparser
-requests
 
