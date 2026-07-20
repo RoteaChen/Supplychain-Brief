@@ -2,7 +2,7 @@ name: Supply Chain Daily Briefing - Debug
 
 on:
   schedule:
-    - cron: '30 3 * * *'
+    - cron: '0 23 * * *'
   workflow_dispatch:
 
 permissions:
