@@ -1,8 +1,8 @@
-name: Supply Chain Daily Briefing
+name: Supply Chain Daily Briefing - Debug
 
 on:
   schedule:
-    - cron: '0 23 * * *'
+    - cron: '30 3 * * *'
   workflow_dispatch:
 
 permissions:
@@ -14,35 +14,120 @@ jobs:
     timeout-minutes: 15
     
     steps:
+      # Step 1: Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python
+      # Step 2: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       
-      # 关键：先检查语法，防止中文引号等导致的 SyntaxError
+      # Step 3: Show environment info
+      - name: Show environment info
+        run: |
+          echo "=== Environment Info ==="
+          echo "Python version: $(python --version)"
+          echo "Working directory: $(pwd)"
+          echo "Files in workspace:"
+          ls -la
+          echo ""
+          echo "Python path: $(which python)"
+          echo "Pip version: $(pip --version)"
+      
+      # Step 4: Check Python syntax of the crawler file
       - name: Check Python syntax
         run: |
-          echo "Checking syntax..."
-          python -m py_compile briefing_enhanced.py && echo "SYNTAX OK" || (echo "SYNTAX ERROR" && exit 1)
+          echo "=== Checking Python Syntax ==="
+          if [ -f briefing_enhanced.py ]; then
+            python -m py_compile briefing_enhanced.py && echo "SYNTAX OK" || echo "SYNTAX ERROR"
+          elif [ -f briefing.py ]; then
+            python -m py_compile briefing.py && echo "SYNTAX OK (briefing.py)" || echo "SYNTAX ERROR"
+          else
+            echo "ERROR: No briefing script found!"
+            echo "Looking for briefing*.py files:"
+            ls -la briefing*.py 2>/dev/null || echo "No briefing*.py files"
+          fi
       
+      # Step 5: Quick Python import test
+      - name: Test Python imports
+        run: |
+          echo "=== Testing Python Imports ==="
+          python -c "import urllib.request; print(urllib.request.__file__)"
+          python -c "import re; print(re.__file__)"
+          python -c "from datetime import datetime; print(datetime.now())"
+          python -c "import xml.etree.ElementTree; print('ET OK')"
+          python -c "import ssl; print('ssl OK')"
+          python -c "import socket; print('socket OK')"
+          echo ""
+          echo "Optional imports:"
+          python -c "import feedparser; print('feedparser OK')" 2>/dev/null || echo "feedparser: not installed"
+          python -c "from bs4 import BeautifulSoup; print('bs4 OK')" 2>/dev/null || echo "bs4: not installed"
+          python -c "import dns.resolver; print('dns OK')" 2>/dev/null || echo "dns: not installed"
+      
+      # Step 6: Install dependencies
       - name: Install dependencies
         run: |
+          echo "=== Installing Dependencies ==="
           python -m pip install --upgrade pip
-          pip install dnspython beautifulsoup4 feedparser || echo "Optional deps skipped"
+          pip install dnspython beautifulsoup4 feedparser || echo "Some packages failed, continuing..."
+          echo ""
+          echo "Installed packages:"
+          pip list | grep -E "dnspython|beautifulsoup|feedparser" || echo "No matching packages"
       
-      - name: Run crawler
+      # Step 7: Run crawler with full trace
+      - name: Run crawler with trace
         env:
           SERVERCHAN_KEY: ${{ secrets.SERVERCHAN_KEY }}
-        run: python briefing_enhanced.py
+        run: |
+          echo "=== Running Crawler ==="
+          echo "Start time: $(date)"
+          echo ""
+          # Determine which file to run
+          if [ -f briefing_enhanced.py ]; then
+            SCRIPT="briefing_enhanced.py"
+          elif [ -f briefing_debug.py ]; then
+            SCRIPT="briefing_debug.py"
+          elif [ -f briefing.py ]; then
+            SCRIPT="briefing.py"
+          else
+            echo "ERROR: No briefing script found!"
+            exit 1
+          fi
+          echo "Running: python $SCRIPT"
+          echo ""
+          # Run with unbuffered output and capture exit code
+          python -u "$SCRIPT" 2>&1
+          EXIT_CODE=$?
+          echo ""
+          echo "=== Crawler Finished ==="
+          echo "Exit code: $EXIT_CODE"
+          echo "End time: $(date)"
+          exit $EXIT_CODE
       
-      - name: Upload output
+      # Step 8: Check output files
+      - name: Check output files
+        if: always()
+        run: |
+          echo "=== Checking Output Files ==="
+          echo "Files in workspace:"
+          ls -la
+          echo ""
+          echo "Looking for briefing output files:"
+          ls -la briefing_*.txt 2>/dev/null || echo "No briefing_*.txt files found"
+          echo ""
+          echo "Looking for any .txt files:"
+          ls -la *.txt 2>/dev/null || echo "No .txt files found"
+      
+      # Step 9: Upload artifacts
+      - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: briefing-output-${{ github.run_id }}
-          path: briefing_*.txt
+          name: briefing-debug-output-${{ github.run_id }}
+          path: |
+            briefing_*.txt
+            *.py
           if-no-files-found: ignore
           retention-days: 7
